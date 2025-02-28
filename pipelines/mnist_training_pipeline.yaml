@@ -1,0 +1,198 @@
+# PIPELINE DEFINITION
+# Name: mnist-pipeline
+# Description: End-to-end MNIST training pipeline using Docker
+components:
+  comp-define-loss:
+    executorLabel: exec-define-loss
+    inputDefinitions:
+      artifacts:
+        model_input:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        loss_output:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        optimizer_output:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-define-model:
+    executorLabel: exec-define-model
+    outputDefinitions:
+      artifacts:
+        model_output:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+  comp-load-data:
+    executorLabel: exec-load-data
+    outputDefinitions:
+      artifacts:
+        output_dataset_test:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        output_dataset_train:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-train-model:
+    executorLabel: exec-train-model
+    inputDefinitions:
+      artifacts:
+        loss_input:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        model_input:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+        optimizer_input:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        test_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        train_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        trained_model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-define-loss:
+      container:
+        args:
+        - --model_input
+        - '{{$.inputs.artifacts[''model_input''].path}}'
+        - --loss_output
+        - '{{$.outputs.artifacts[''loss_output''].path}}'
+        - --optimizer_output
+        - '{{$.outputs.artifacts[''optimizer_output''].path}}'
+        command:
+        - python
+        - /app/define_loss.py
+        image: timsmans/ml-pipeline:v11
+    exec-define-model:
+      container:
+        args:
+        - --model_output
+        - '{{$.outputs.artifacts[''model_output''].path}}'
+        command:
+        - python
+        - /app/define_model.py
+        image: timsmans/ml-pipeline:v11
+    exec-load-data:
+      container:
+        args:
+        - --output_dataset_train
+        - '{{$.outputs.artifacts[''output_dataset_train''].path}}'
+        - --output_dataset_test
+        - '{{$.outputs.artifacts[''output_dataset_test''].path}}'
+        command:
+        - python
+        - /app/data/load_data.py
+        image: timsmans/ml-pipeline:v11
+    exec-train-model:
+      container:
+        args:
+        - --train_data
+        - '{{$.inputs.artifacts[''train_data''].path}}'
+        - --test_data
+        - '{{$.inputs.artifacts[''test_data''].path}}'
+        - --model_input
+        - '{{$.inputs.artifacts[''model_input''].path}}'
+        - --loss_input
+        - '{{$.inputs.artifacts[''loss_input''].path}}'
+        - --optimizer_input
+        - '{{$.inputs.artifacts[''optimizer_input''].path}}'
+        - --trained_model
+        - '{{$.outputs.artifacts[''trained_model''].path}}'
+        command:
+        - python
+        - /app/train_model.py
+        image: timsmans/ml-pipeline:v11
+pipelineInfo:
+  description: End-to-end MNIST training pipeline using Docker
+  name: mnist-pipeline
+root:
+  dag:
+    tasks:
+      define-loss:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-define-loss
+        dependentTasks:
+        - define-model
+        inputs:
+          artifacts:
+            model_input:
+              taskOutputArtifact:
+                outputArtifactKey: model_output
+                producerTask: define-model
+        taskInfo:
+          name: define-loss
+      define-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-define-model
+        dependentTasks:
+        - load-data
+        taskInfo:
+          name: define-model
+      load-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-load-data
+        taskInfo:
+          name: load-data
+      train-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-model
+        dependentTasks:
+        - define-loss
+        - define-model
+        - load-data
+        inputs:
+          artifacts:
+            loss_input:
+              taskOutputArtifact:
+                outputArtifactKey: loss_output
+                producerTask: define-loss
+            model_input:
+              taskOutputArtifact:
+                outputArtifactKey: model_output
+                producerTask: define-model
+            optimizer_input:
+              taskOutputArtifact:
+                outputArtifactKey: optimizer_output
+                producerTask: define-loss
+            test_data:
+              taskOutputArtifact:
+                outputArtifactKey: output_dataset_test
+                producerTask: load-data
+            train_data:
+              taskOutputArtifact:
+                outputArtifactKey: output_dataset_train
+                producerTask: load-data
+        taskInfo:
+          name: train-model
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.11.0
