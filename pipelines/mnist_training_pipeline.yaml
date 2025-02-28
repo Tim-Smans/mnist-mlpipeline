@@ -150,8 +150,6 @@ root:
           enableCache: true
         componentRef:
           name: comp-define-model
-        dependentTasks:
-        - load-data
         taskInfo:
           name: define-model
       load-data:

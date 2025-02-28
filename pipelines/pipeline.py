@@ -89,7 +89,6 @@ def mnist_pipeline():
     )
 
     # Define execution order
-    define_model_task.after(load_data_task)
     define_loss_task.after(define_model_task)
     train_task.after(define_loss_task)
 

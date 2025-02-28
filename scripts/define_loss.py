@@ -2,6 +2,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from model import MNISTModel  # Import the shared model definition
 
 # Parse arguments
 parser = argparse.ArgumentParser()
