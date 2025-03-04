@@ -7,7 +7,7 @@ def load_data(
     output_dataset_test: Output[Dataset]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v11',  # Your Docker image
+        image='timsmans/ml-pipeline:v25', 
         command=['python', '/app/data/load_data.py'],
         args=[
             '--output_dataset_train', output_dataset_train.path,
@@ -20,7 +20,7 @@ def define_model(
     model_output: Output[Model]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v11',  # Your Docker image
+        image='timsmans/ml-pipeline:v25',
         command=['python', '/app/define_model.py'],
         args=['--model_output', model_output.path]
     )
@@ -32,7 +32,7 @@ def define_loss(
     optimizer_output: Output[Dataset]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v11',  # Your Docker image
+        image='timsmans/ml-pipeline:v25',
         command=['python', '/app/define_loss.py'],
         args=[
             '--model_input', model_input.path,
@@ -51,7 +51,7 @@ def train_model(
     trained_model: Output[Model]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v11',  # Your Docker image
+        image='timsmans/ml-pipeline:v25',
         command=['python', '/app/train_model.py'],
         args=[
             '--train_data', train_data.path,
@@ -62,6 +62,7 @@ def train_model(
             '--trained_model', trained_model.path
         ]
     )
+
 
 @dsl.pipeline(
     name="mnist-pipeline",

@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from model import MNISTModel  # Import the shared model definition
 
-# Parse arguments
+# Parse arguments, we get the model from the previous step, and output the loss and optimizer
 parser = argparse.ArgumentParser()
 parser.add_argument('--model_input', type=str, required=True)
 parser.add_argument('--loss_output', type=str, required=True)

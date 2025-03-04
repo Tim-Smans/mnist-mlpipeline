@@ -3,6 +3,10 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 import os
 
+#
+# This file will download the data from the MNIST dataset and transform it to use for training.
+##
+
 # Transforming
 transform = transforms.Compose(
    [transforms.ToTensor()]

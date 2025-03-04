@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Jaar%2024-25/Werkplekleren/MLOps%20architecture/MNIST/mlruns/0/a6657329fec645ef849bdb38341069b0/artifacts
+end_time: 1741075020980
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: a6657329fec645ef849bdb38341069b0
+run_name: incongruous-lamb-880
+run_uuid: a6657329fec645ef849bdb38341069b0
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1741075020873
+status: 3
+tags: []
+user_id: timsm

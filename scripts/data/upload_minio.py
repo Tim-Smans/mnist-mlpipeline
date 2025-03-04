@@ -3,7 +3,7 @@ import boto3
 # Configuring the MinIO client
 s3 = boto3.client(
   "s3",
-  endpoint_url="http://9.223.154.101:9000",
+  endpoint_url="http://9.223.80.153/",
   aws_access_key_id="minio",
   aws_secret_access_key="minio123"
 )

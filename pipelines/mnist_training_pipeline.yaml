@@ -84,7 +84,7 @@ deploymentSpec:
         command:
         - python
         - /app/define_loss.py
-        image: timsmans/ml-pipeline:v11
+        image: timsmans/ml-pipeline:v25
     exec-define-model:
       container:
         args:
@@ -93,7 +93,7 @@ deploymentSpec:
         command:
         - python
         - /app/define_model.py
-        image: timsmans/ml-pipeline:v11
+        image: timsmans/ml-pipeline:v25
     exec-load-data:
       container:
         args:
@@ -104,7 +104,7 @@ deploymentSpec:
         command:
         - python
         - /app/data/load_data.py
-        image: timsmans/ml-pipeline:v11
+        image: timsmans/ml-pipeline:v25
     exec-train-model:
       container:
         args:
@@ -123,7 +123,7 @@ deploymentSpec:
         command:
         - python
         - /app/train_model.py
-        image: timsmans/ml-pipeline:v11
+        image: timsmans/ml-pipeline:v25
 pipelineInfo:
   description: End-to-end MNIST training pipeline using Docker
   name: mnist-pipeline

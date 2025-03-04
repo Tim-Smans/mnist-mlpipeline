@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Jaar%2024-25/Werkplekleren/MLOps%20architecture/MNIST/mlruns/0/ab524018704d486cb85b51ff837bb6de/artifacts
+end_time: 1741075076277
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: ab524018704d486cb85b51ff837bb6de
+run_name: blushing-skink-214
+run_uuid: ab524018704d486cb85b51ff837bb6de
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1741075076198
+status: 3
+tags: []
+user_id: timsm
