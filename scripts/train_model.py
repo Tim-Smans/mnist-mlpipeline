@@ -24,11 +24,10 @@ try:
         artifact_location="s3://test/"
     )
 except mlflow.exceptions.MlflowException:
-    mlflow.set_experiment(experiment_name)
+    pass
 
 
 print("MLflow Tracking URI:", mlflow.get_tracking_uri())
-print("Current Hostname:", os.uname()[1])
 
 # Parse arguments
 parser = argparse.ArgumentParser()
@@ -71,8 +70,13 @@ def train(model, train_data, test_data):
     num_epochs = 5
     best_accuracy = 0
 
+    if mlflow.active_run():
+        print(f"Ending existing run {mlflow.active_run().info.run_id}")
+        mlflow.end_run()
+
+
     with mlflow.start_run() as run:
-        print(f"Started MLflow run with ID: {run.info.run_id}") 
+        print(f"Started MLflow run with ID: {run.info.run_id} with {num_epochs} epochs") 
         print("Active runs:", mlflow.search_runs())
         try:
             print("Started MLflow run..")
@@ -101,15 +105,18 @@ def train(model, train_data, test_data):
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     torch.save(model, args.trained_model)
-                    mlflow.pytorch.log_model(
-                        pytorch_model=model,
-                        artifact_path="mnist_model",
-                        registered_model_name="mnist-model",
-                    )
+
+
 
             print(f"Final Accuracy: {best_accuracy}")
             mlflow.log_metric("final_accuracy", best_accuracy)
-
+            mlflow.pytorch.log_model(
+                pytorch_model=model,
+                artifact_path="mnist_model",
+                code_paths=["model.py"],
+                registered_model_name="mnist-model",
+            )
+            
         except Exception as e:
             print(f"MLflow logging error: {e}")
 

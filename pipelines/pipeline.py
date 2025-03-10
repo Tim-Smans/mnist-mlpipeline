@@ -7,7 +7,7 @@ def load_data(
     output_dataset_test: Output[Dataset]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v25', 
+        image='timsmans/ml-pipeline:v37', 
         command=['python', '/app/data/load_data.py'],
         args=[
             '--output_dataset_train', output_dataset_train.path,
@@ -20,7 +20,7 @@ def define_model(
     model_output: Output[Model]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v25',
+        image='timsmans/ml-pipeline:v37',
         command=['python', '/app/define_model.py'],
         args=['--model_output', model_output.path]
     )
@@ -32,7 +32,7 @@ def define_loss(
     optimizer_output: Output[Dataset]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v25',
+        image='timsmans/ml-pipeline:v37',
         command=['python', '/app/define_loss.py'],
         args=[
             '--model_input', model_input.path,
@@ -48,10 +48,11 @@ def train_model(
     model_input: Input[Model],
     loss_input: Input[Dataset],
     optimizer_input: Input[Dataset],
-    trained_model: Output[Model]
+    trained_model: Output[Model],
+    epochs: int = 5
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v25',
+        image='timsmans/ml-pipeline:v37',
         command=['python', '/app/train_model.py'],
         args=[
             '--train_data', train_data.path,
@@ -63,12 +64,22 @@ def train_model(
         ]
     )
 
+@dsl.container_component
+def get_latest_model(trained_model: Input[Model]):
+    return dsl.ContainerSpec(
+        image='timsmans/ml-pipeline:v37',
+        command=['python', '/app/get_latest_model.py'],
+        args=[
+            '--trained_model', trained_model.path
+        ]
+    )
+
 
 @dsl.pipeline(
     name="mnist-pipeline",
     description="End-to-end MNIST training pipeline using Docker"
 )
-def mnist_pipeline():
+def mnist_pipeline(epochs: int = 5):
     # Data loading
     load_data_task = load_data()
     
@@ -86,12 +97,21 @@ def mnist_pipeline():
         test_data=load_data_task.outputs['output_dataset_test'],
         model_input=define_model_task.outputs['model_output'],
         loss_input=define_loss_task.outputs['loss_output'],
-        optimizer_input=define_loss_task.outputs['optimizer_output']
+        optimizer_input=define_loss_task.outputs['optimizer_output'],
+        epochs=epochs
+    )
+
+    train_task.set_caching_options(False)
+
+    # Get latest model
+    get_latest_model_task = get_latest_model(
+        trained_model=train_task.outputs['trained_model']
     )
 
     # Define execution order
     define_loss_task.after(define_model_task)
     train_task.after(define_loss_task)
+    get_latest_model_task.after(train_task)
 
 if __name__ == "__main__":
     from kfp import compiler

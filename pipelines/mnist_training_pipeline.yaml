@@ -1,6 +1,8 @@
 # PIPELINE DEFINITION
 # Name: mnist-pipeline
 # Description: End-to-end MNIST training pipeline using Docker
+# Inputs:
+#    epochs: int [Default: 5.0]
 components:
   comp-define-loss:
     executorLabel: exec-define-loss
@@ -25,6 +27,14 @@ components:
     outputDefinitions:
       artifacts:
         model_output:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+  comp-get-latest-model:
+    executorLabel: exec-get-latest-model
+    inputDefinitions:
+      artifacts:
+        trained_model:
           artifactType:
             schemaTitle: system.Model
             schemaVersion: 0.0.1
@@ -64,6 +74,11 @@ components:
           artifactType:
             schemaTitle: system.Dataset
             schemaVersion: 0.0.1
+      parameters:
+        epochs:
+          defaultValue: 5.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
     outputDefinitions:
       artifacts:
         trained_model:
@@ -84,7 +99,7 @@ deploymentSpec:
         command:
         - python
         - /app/define_loss.py
-        image: timsmans/ml-pipeline:v25
+        image: timsmans/ml-pipeline:v37
     exec-define-model:
       container:
         args:
@@ -93,7 +108,16 @@ deploymentSpec:
         command:
         - python
         - /app/define_model.py
-        image: timsmans/ml-pipeline:v25
+        image: timsmans/ml-pipeline:v37
+    exec-get-latest-model:
+      container:
+        args:
+        - --trained_model
+        - '{{$.inputs.artifacts[''trained_model''].path}}'
+        command:
+        - python
+        - /app/get_latest_model.py
+        image: timsmans/ml-pipeline:v37
     exec-load-data:
       container:
         args:
@@ -104,7 +128,7 @@ deploymentSpec:
         command:
         - python
         - /app/data/load_data.py
-        image: timsmans/ml-pipeline:v25
+        image: timsmans/ml-pipeline:v37
     exec-train-model:
       container:
         args:
@@ -123,7 +147,7 @@ deploymentSpec:
         command:
         - python
         - /app/train_model.py
-        image: timsmans/ml-pipeline:v25
+        image: timsmans/ml-pipeline:v37
 pipelineInfo:
   description: End-to-end MNIST training pipeline using Docker
   name: mnist-pipeline
@@ -152,6 +176,21 @@ root:
           name: comp-define-model
         taskInfo:
           name: define-model
+      get-latest-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-get-latest-model
+        dependentTasks:
+        - train-model
+        inputs:
+          artifacts:
+            trained_model:
+              taskOutputArtifact:
+                outputArtifactKey: trained_model
+                producerTask: train-model
+        taskInfo:
+          name: get-latest-model
       load-data:
         cachingOptions:
           enableCache: true
@@ -160,8 +199,7 @@ root:
         taskInfo:
           name: load-data
       train-model:
-        cachingOptions:
-          enableCache: true
+        cachingOptions: {}
         componentRef:
           name: comp-train-model
         dependentTasks:
@@ -190,7 +228,16 @@ root:
               taskOutputArtifact:
                 outputArtifactKey: output_dataset_train
                 producerTask: load-data
+          parameters:
+            epochs:
+              componentInputParameter: epochs
         taskInfo:
           name: train-model
+  inputDefinitions:
+    parameters:
+      epochs:
+        defaultValue: 5.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
 schemaVersion: 2.1.0
 sdkVersion: kfp-2.11.0
