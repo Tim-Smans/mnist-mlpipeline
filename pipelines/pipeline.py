@@ -1,5 +1,5 @@
 from kfp import dsl
-from kfp.dsl import Input, InputPath, Output, OutputPath, Dataset, Model
+from kfp.dsl import Input, Output, Dataset, Model
 
 @dsl.container_component
 def load_data(
@@ -7,7 +7,7 @@ def load_data(
     output_dataset_test: Output[Dataset]
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v37', 
+        image='timsmans/ml-pipeline:latest', 
         command=['python', '/app/data/load_data.py'],
         args=[
             '--output_dataset_train', output_dataset_train.path,
@@ -16,62 +16,28 @@ def load_data(
     )
 
 @dsl.container_component
-def define_model(
-    model_output: Output[Model]
-):
-    return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v37',
-        command=['python', '/app/define_model.py'],
-        args=['--model_output', model_output.path]
-    )
-
-@dsl.container_component
-def define_loss(
-    model_input: Input[Model],
-    loss_output: Output[Dataset],
-    optimizer_output: Output[Dataset]
-):
-    return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v37',
-        command=['python', '/app/define_loss.py'],
-        args=[
-            '--model_input', model_input.path,
-            '--loss_output', loss_output.path,
-            '--optimizer_output', optimizer_output.path
-        ]
-    )
-
-@dsl.container_component
 def train_model(
     train_data: Input[Dataset],
     test_data: Input[Dataset],
-    model_input: Input[Model],
-    loss_input: Input[Dataset],
-    optimizer_input: Input[Dataset],
     trained_model: Output[Model],
     epochs: int = 5
 ):
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v37',
+        image='timsmans/ml-pipeline:latest',
         command=['python', '/app/train_model.py'],
         args=[
             '--train_data', train_data.path,
             '--test_data', test_data.path,
-            '--model_input', model_input.path,
-            '--loss_input', loss_input.path,
-            '--optimizer_input', optimizer_input.path,
-            '--trained_model', trained_model.path
-        ]
+            '--trained_model', trained_model.path,
+            '--epochs', str(epochs)
+        ],
     )
-
+    
 @dsl.container_component
-def get_latest_model(trained_model: Input[Model]):
+def get_latest_model():
     return dsl.ContainerSpec(
-        image='timsmans/ml-pipeline:v37',
+        image='timsmans/ml-pipeline:latest',
         command=['python', '/app/get_latest_model.py'],
-        args=[
-            '--trained_model', trained_model.path
-        ]
     )
 
 
@@ -83,35 +49,21 @@ def mnist_pipeline(epochs: int = 5):
     # Data loading
     load_data_task = load_data()
     
-    # Model definition
-    define_model_task = define_model()
-    
-    # Loss definition
-    define_loss_task = define_loss(
-        model_input=define_model_task.outputs['model_output']
-    )
-    
     # Training
     train_task = train_model(
         train_data=load_data_task.outputs['output_dataset_train'],
         test_data=load_data_task.outputs['output_dataset_test'],
-        model_input=define_model_task.outputs['model_output'],
-        loss_input=define_loss_task.outputs['loss_output'],
-        optimizer_input=define_loss_task.outputs['optimizer_output'],
         epochs=epochs
     )
 
+    get_latest_task = get_latest_model()
+    
     train_task.set_caching_options(False)
-
-    # Get latest model
-    get_latest_model_task = get_latest_model(
-        trained_model=train_task.outputs['trained_model']
-    )
+    get_latest_task.set_caching_options(False)
 
     # Define execution order
-    define_loss_task.after(define_model_task)
-    train_task.after(define_loss_task)
-    get_latest_model_task.after(train_task)
+    train_task.after(load_data_task)
+    get_latest_task.after(train_task)
 
 if __name__ == "__main__":
     from kfp import compiler

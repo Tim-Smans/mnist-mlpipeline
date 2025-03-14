@@ -1,86 +1,45 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import flask
-from flask import request, jsonify
+import streamlit as st
 import numpy as np
-import boto3
-import os
-from PIL import Image
-import torchvision.transforms as transforms
+import requests
+import json
+from PIL import Image, ImageOps
 
+# MLflow API Endpoint
+API_URL = "http://127.0.0.1/mlflow-model/invocations"  # Change this for Kubernetes
 
-MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://9.223.80.153")
-MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
-MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minio123")
-MINIO_BUCKET = "ml-models"
-MODEL_FILENAME = "trained_model.pth"
-MODEL_LOCAL_PATH = f"{MODEL_FILENAME}"
+st.title("MNIST Digit Classifier")
+st.write("Upload a digit (0-9) to classify it using the MLflow Model.")
 
-s3 = boto3.client(
-    "s3",
-    endpoint_url=MINIO_ENDPOINT,
-    aws_access_key_id=MINIO_ACCESS_KEY,
-    aws_secret_access_key=MINIO_SECRET_KEY
-)
+uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
 
-if not os.path.exists(MODEL_LOCAL_PATH):
-    print(f"Downloading model from MinIO: {MODEL_FILENAME}...")
-    s3.download_file(MINIO_BUCKET, MODEL_FILENAME, MODEL_LOCAL_PATH)
-    print("Model downloaded successfully.")
+def preprocess_image(image):
+    """Preprocesses the image: Resize, Grayscale, Normalize, Invert"""
+    image = image.convert("L")  # Convert to grayscale
+    image = image.resize((28, 28))  # Resize to MNIST format
+    image_array = np.array(image) / 255.0  # Normalize (0-1)
+    return image_array.tolist()
 
+if st.button("Predict"):
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image", use_container_width=True)
 
+        # Preprocess image
+        input_data = preprocess_image(image)
+        payload = json.dumps({"instances": [input_data]})
 
-s3 = boto3.client(
-    "s3",
-    endpoint_url=MINIO_ENDPOINT,
-    aws_access_key_id=MINIO_ACCESS_KEY,
-    aws_secret_access_key=MINIO_SECRET_KEY
-)
+        # Send request to MLflow API
+        try:
+            response = requests.post(API_URL, data=payload, headers={"Content-Type": "application/json", "Host": "mlflow-model.local"})
+            prediction = response.json()
+            
+            # Extract prediction
+            logits = prediction.get("predictions", [[]])[0]  # Get first prediction
+            predicted_digit = np.argmax(logits)
 
-class MNISTModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.fc = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(28*28, 128),
-            nn.ReLU(),
-            nn.Linear(128, 10)
-        )
+            st.success(f"Predicted Digit: {predicted_digit}")
 
-    def forward(self, x):
-        return self.fc(x)
-    
-# Model laden
-model = MNISTModel()
-model.load_state_dict(torch.load(MODEL_LOCAL_PATH, map_location=torch.device('cpu')))
-model.eval()
-
-app = flask.Flask(__name__)
-
-@app.route("/predict", methods=["POST"])
-def predict():
-    try:
-        # Pak het bestand uit de request
-        file = request.files["file"]
-        image = Image.open(file).convert("L")  # Converteer naar grayscale (MNIST is zwart-wit)
-
-        # Transformeer de afbeelding
-        transform = transforms.Compose([
-            transforms.Resize((28, 28)),
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
-        ])
-        image = transform(image).unsqueeze(0)  # Voeg batch-dimensie toe
-
-        # Voorspel met het model
-        outputs = model(image)
-        prediction = torch.argmax(outputs, dim=1).item()
-
-        return jsonify({"prediction": prediction})
-    
-    except Exception as e:
-        return jsonify({"error": str(e)})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+        except Exception as e:
+            st.error(f"Error: {e}")
+    else:
+        st.error("Please upload an image first!")

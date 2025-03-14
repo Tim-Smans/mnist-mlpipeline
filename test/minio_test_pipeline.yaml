@@ -1,0 +1,39 @@
+# PIPELINE DEFINITION
+# Name: minio-connection-test
+# Description: Pipeline to test MinIO connectivity
+components:
+  comp-test-minio-connection:
+    executorLabel: exec-test-minio-connection
+    outputDefinitions:
+      artifacts:
+        output_log:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-test-minio-connection:
+      container:
+        args:
+        - yum install -y python3-pip && pip3 install boto3 && python3 -c 'import boto3;
+          s3 = boto3.client("s3", endpoint_url="http://istio-ingressgateway.istio-system.svc.cluster.local",
+          aws_access_key_id="minio", aws_secret_access_key="minio123"); print(s3.list_buckets())'
+        command:
+        - sh
+        - -c
+        image: amazonlinux
+pipelineInfo:
+  description: Pipeline to test MinIO connectivity
+  name: minio-connection-test
+root:
+  dag:
+    tasks:
+      test-minio-connection:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-test-minio-connection
+        taskInfo:
+          name: test-minio-connection
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.12.1

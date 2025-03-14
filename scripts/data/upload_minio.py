@@ -2,10 +2,10 @@ import boto3
 
 # Configuring the MinIO client
 s3 = boto3.client(
-  "s3",
-  endpoint_url="http://9.223.80.153/",
-  aws_access_key_id="minio",
-  aws_secret_access_key="minio123"
+    "s3",
+    endpoint_url="http://localhost",
+    aws_access_key_id="minio",
+    aws_secret_access_key="minio123"
 )
 
 # Uploading the files
@@ -13,15 +13,15 @@ s3 = boto3.client(
 # line 2 -> The name of the bucket to use in MinIO
 # line 3 -> The name of the directory/file in MinIO
 s3.upload_file(
-  "./data/saves/trainset.pt",
-  "ml-data",
-  "mnist/train.pt"
+    "./data/saves/trainset.npz", 
+    "ml-data",
+    "mnist/train.npz" 
 )
 
 s3.upload_file(
-  "./data/saves/testset.pt",
-  "ml-data",
-  "mnist/test.pt"
+    "./data/saves/testset.npz",
+    "ml-data",
+    "mnist/test.npz" 
 )
 
-print("Successfully uploaded data to MinIO")
+print("Successfully uploaded TensorFlow-compatible dataset to MinIO")
